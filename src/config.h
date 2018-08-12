@@ -20,14 +20,39 @@
 #define MAX_VOLTS 5
 #define MAX_MAMPS 2000
 
+// Cursor blink
+#define BLINK_INTER_MS 200
+uint32_t lastBlinkMs = 0;
+int8_t blinkState = LOW;
+
 // leds state mapped on bits for optimisation
-byte led_set[STRIP_SIZE / 8 + 1];
+//int8_t led_set[STRIP_SIZE / 8 + 1];
 
 // The real array of leds. One item for each led in the strip.
 CRGB leds[STRIP_SIZE];
-CRGB leds_temp[STRIP_SIZE];
+CRGB temp1[STRIP_SIZE];
+CRGB temp2[STRIP_SIZE];
 
-byte lastButtonState[13];
-byte buttonState[13];
-unsigned long lastDebounceTime[13];
-unsigned debouceDelay = 50;
+// Button debounce system
+uint8_t debouceDelay = 50;
+int8_t lastButtonState[6];
+int8_t buttonState[6];
+uint32_t lastDebounceTime[13];
+
+uint16_t lastPotarRead = 0;
+
+
+/*
+ * System settings
+ * Read from EEPROM if
+ * - it looks valid
+ * - the length of the sequence matches the current STRIP_SIZE
+ */
+
+struct EEPROMConfig {
+  uint8_t stripSize = STRIP_SIZE;
+  int8_t currentSeq = 0;
+  int16_t usedSeq = 0; // bitset (16)
+} config;
+
+const int16_t MAX_SEQ = 1020 / (STRIP_SIZE * sizeof(CRGB));

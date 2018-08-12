@@ -1,8 +1,8 @@
 #include "config.h"
 
-bool debounceButton(byte btn)
+bool debounceButton(int8_t btn)
 {
-  int reading = digitalRead(btn);
+  uint32_t reading = digitalRead(btn);
 
   if (reading != lastButtonState[btn])
     lastDebounceTime[btn] = millis();

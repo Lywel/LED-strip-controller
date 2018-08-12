@@ -6,7 +6,7 @@ SRC=src/sketch.ino
 
 
 build: $(SRC)
-	$(INO) --verify $(INOFLAGS) $(SRC)
+	$(INO) --verify $(INOFLAGS) --verbose-build $(SRC)
 
 burn: $(SRC)
 	$(INO) --upload $(INOFLAGS) $(SRC)
