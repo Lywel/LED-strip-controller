@@ -74,9 +74,23 @@ void reloadSeq()
       Serial.print(!!leds[i]);
     }
   }
+  Serial.println();
 
-  Serial.print("\r\nBrightness: ");
-  Serial.println(brightness);
-
+  seqBrightness = brightness;
   FastLED.show(brightness);
+}
+
+
+void saveSequence()
+{
+  for (uint8_t i = 0; i < STRIP_SIZE; ++i)
+    writeSeqLED(i, temp2[i]);
+
+  uint16_t brightnessIndex =
+    sizeof(EEPROMConfig)
+    + (config.currentSeq+1) * STRIP_SIZE * sizeof(CRGB)
+    + config.currentSeq * sizeof(uint8_t);
+  EEPROM[brightnessIndex] = seqBrightness;
+
+  EEPROM.put(0, config);
 }

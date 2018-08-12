@@ -1,6 +1,7 @@
 #include "config.h"
 #include <EEPROM.h>
 
+
 /*
  * The setup function configuring the hardware.
  * This is called once on boot and on reset.
@@ -38,6 +39,8 @@ void setup()
   reloadSeq();
 }
 
+
+
 /*
  * Main Loop
  * This is the 'display' mode
@@ -46,7 +49,6 @@ void setup()
  * - BTN1 goes to the next sequences (loops to the first at the end)
  * - BTN2 leads to the configuration mode
  */
-
 void loop()
 {
   // Handle buttons
@@ -54,34 +56,39 @@ void loop()
   bool btn2 = debounceButton(BTN2_PIN);
 
 
+  // loop through sequences
   if (btn1)
   {
     ++(config.currentSeq) %= MAX_SEQ;
     reloadSeq();
   }
 
+  // Open the sequence editor
   if (btn2)
   {
     // save state and copy the leds to a live buffer to save EEPROM io
     int8_t seq = config.currentSeq;
-    uint8_t brightness = FastLED.getBrightness();
-    memcpy(temp1, leds, STRIP_SIZE * sizeof(CRGB));
 
-    configMode();
+    sequenceManager();
 
     // restore saved state (not EEPROM io)
-    memcpy(leds, temp1, STRIP_SIZE * sizeof(CRGB));
     config.currentSeq = seq;
-
-    FastLED.show(brightness);
+    reloadSeq();
   }
 }
 
 
-void configMode()
+
+/*
+ * Sequence Manager
+ * - Select a sequence to edit
+ * - Edit it
+ * - Save it
+ */
+void sequenceManager()
 {
   // Select the sequence to edit
-  config.currentSeq = selectSeq();
+  config.currentSeq = sequenceSelector();
   // If user canceled return to display mode
   if (config.currentSeq < 0)
     return;
@@ -90,7 +97,10 @@ void configMode()
 
   // Load the sequence
   reloadSeq();
+  // Save the sequence to a buffer
   memcpy(temp2, leds, STRIP_SIZE * sizeof(CRGB));
+
+  uint8_t currentLED = 0;
 
   while (true)
   {
@@ -98,49 +108,109 @@ void configMode()
     bool btn1 = debounceButton(BTN1_PIN);
     bool btn2 = debounceButton(BTN2_PIN);
     uint16_t potarRead = analogRead(POTAR_PIN);
-    uint8_t currentLED =
-      constrain(map(potarRead, 0, 1023, 0, STRIP_SIZE), 0, STRIP_SIZE-1);
 
-    // Reset the strip
-    memcpy(leds, temp2, STRIP_SIZE * sizeof(CRGB));
+    // Clear the old cursor
+    leds[currentLED] = temp2[currentLED];
 
-    // Set the cursor
+    currentLED = constrain(
+      map(potarRead, 0, 1023, 0, STRIP_SIZE),
+      0, STRIP_SIZE-1);
+
+    // Set the new cursor
     leds[currentLED] = blinkColor(temp2[currentLED], CRGB::Blue);
 
     // Display the strip + blinking cursor
     FastLED.show(MENU_BRIGHTNESS);
 
-    // Set/unset currentLED
-    if (btn1)
-      temp2[currentLED] = temp2[currentLED] ? CRGB::Black : CRGB::White;
-
     if (btn2)
-      break;
+    {
+      Serial.println("Click 2");
+      if (sequenceEditorMenu() == -1)
+        break;
+    }
+
+    // Set / unset currentLED
+    if (btn1)
+    {
+      Serial.println("Click 1");
+      temp2[currentLED] = temp2[currentLED] ? CRGB::Black : CRGB::White;
+    }
   }
-
-  uint8_t brightness = selectBrightness();
-
-  saveSeq(brightness);
 }
 
-uint8_t selectBrightness()
+
+
+/* Sequence editor menu
+ * - Save edits
+ * - Discrad edits
+ * - Select the brightness
+ * - TODO: Back to edition
+ * - TODO: Pick color
+ */
+int8_t sequenceEditorMenu()
 {
-  for (uint8_t b = MENU_BRIGHTNESS; b < 127; ++b)
+  FastLED.clear(true);
+
+  while (true)
   {
-    FastLED.show(b);
-    delay(1);
+    // Handle inputs
+    bool btn1 = debounceButton(BTN1_PIN);
+    uint16_t potarRead = analogRead(POTAR_PIN);
+    uint8_t ledId = constrain(map(potarRead, 0, 1023, 0, 3), 0, 2);
+
+
+    // Reset the menu
+    leds[0] = CRGB::Red;
+    leds[1] = CRGB::Green;
+    leds[2] = brightnessAnimation();
+    leds[3] = rainbowAnimation();
+
+    // Set the cursor
+    leds[ledId] = blinkColor(leds[ledId], CRGB::Blue);
+
+    // Display the menu + blinking cursor
+    FastLED.show(MENU_BRIGHTNESS);
+
+    // On click
+    if (btn1)
+    {
+      // Quit without saving
+      if (ledId == 0)
+        break;
+      else if (ledId == 1)
+      {
+        // TODO: use the selected brightness
+        saveSequence();
+        break;
+      }
+      else if (ledId == 2)
+      {
+        seqBrightness = brightnessSelector();
+        return 0;
+      }
+    }
   }
 
-  for (uint8_t b = 127; b > 0; --b)
+  return -1;
+}
+
+
+
+uint8_t brightnessSelector()
+{
+  // Show thw current sequence
+  memcpy(leds, temp2, STRIP_SIZE * sizeof(CRGB));
+
+  for (uint8_t b = MENU_BRIGHTNESS; b > 0; --b)
   {
     FastLED.show(b);
     delay(1);
   }
 
   uint16_t potarRead = analogRead(POTAR_PIN);
-  uint8_t currentBrightness = constrain(map(potarRead, 0, 1023, 0, 255), 0, 255);
+  uint8_t selectedBrightness = constrain(map(potarRead, 0, 1023, 0, 255), 0, 255);
 
-  for (uint8_t b = 0; b < currentBrightness; ++b)
+  for (uint8_t b = 0; b < selectedBrightness; ++b)
   {
     FastLED.show(b);
     delay(1);
@@ -161,7 +231,9 @@ uint8_t selectBrightness()
   }
 }
 
-int8_t selectSeq()
+
+
+int8_t sequenceSelector()
 {
   FastLED.clear(true);
 
@@ -233,63 +305,4 @@ int8_t selectSeq()
   }
 
   return selectedSeq;
-}
-
-void saveSeq(uint8_t brightness)
-{
-  FastLED.clear(true);
-
-  // Menu KO / OK
-  leds[0] = CRGB::Red;
-  leds[1] = CRGB::Green;
-
-  uint8_t ok;
-
-  while (true)
-  {
-    // Handle inputs
-    bool btn1 = debounceButton(BTN1_PIN);
-    uint16_t potarRead = analogRead(POTAR_PIN);
-    ok =
-      constrain(map(potarRead, 0, 1023, 0, 2), 0, 1);
-
-    // Reset the menu
-    leds[0] = CRGB::Red;
-    leds[1] = CRGB::Green;
-
-    // Set the cursor
-    leds[ok] = blinkColor(leds[ok], CRGB::Blue);
-
-    // Display the menu + blinking cursor
-    FastLED.show(MENU_BRIGHTNESS);
-
-    if (btn1)
-      break;
-  }
-
-  if (ok)
-  {
-    for (uint8_t i = 0; i < STRIP_SIZE; ++i)
-      writeSeqLED(i, temp2[i]);
-
-    uint16_t brightnessIndex =
-      sizeof(EEPROMConfig)
-      + (config.currentSeq+1) * STRIP_SIZE * sizeof(CRGB)
-      + config.currentSeq * sizeof(uint8_t);
-    EEPROM[brightnessIndex] = brightness;
-
-    EEPROM.put(0, config);
-  }
-}
-
-
-CRGB blinkColor(CRGB on, CRGB off)
-{
-  uint32_t currentMs = millis();
-  if (currentMs - lastBlinkMs >= BLINK_INTER_MS)
-  {
-    lastBlinkMs = currentMs;
-    blinkState = !blinkState;
-  }
-  return blinkState ? on : off;
 }

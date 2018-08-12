@@ -27,21 +27,19 @@ int8_t blinkState = LOW;
 
 #define MENU_BRIGHTNESS 30
 
-// leds state mapped on bits for optimisation
-//int8_t led_set[STRIP_SIZE / 8 + 1];
-
 // The real array of leds. One item for each led in the strip.
 CRGB leds[STRIP_SIZE];
-CRGB temp1[STRIP_SIZE];
 CRGB temp2[STRIP_SIZE];
 
 // Button debounce system
 uint8_t debouceDelay = 50;
-int8_t lastButtonState[6];
-int8_t buttonState[6];
-uint32_t lastDebounceTime[13];
+int8_t lastButtonState[2];
+int8_t buttonState[2];
+uint32_t lastDebounceTime[2];
 
 uint16_t lastPotarRead = 0;
+
+uint8_t seqBrightness;
 
 /*
  * System settings
