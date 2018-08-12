@@ -49,16 +49,6 @@ void setup()
 
 void loop()
 {
-
-  // Handle brightness
-  uint16_t potarRead = analogRead(POTAR_PIN);
-  if (abs(potarRead - lastPotarRead) > 2)
-  {
-    lastPotarRead = potarRead;
-    FastLED.setBrightness(map(potarRead, 0, 1023, 0, 255));
-    FastLED.show();
-  }
-
   // Handle buttons
   bool btn1 = debounceButton(BTN1_PIN);
   bool btn2 = debounceButton(BTN2_PIN);
@@ -74,6 +64,7 @@ void loop()
   {
     // save state and copy the leds to a live buffer to save EEPROM io
     int8_t seq = config.currentSeq;
+    uint8_t brightness = FastLED.getBrightness();
     memcpy(temp1, leds, STRIP_SIZE * sizeof(CRGB));
 
     configMode();
@@ -82,7 +73,7 @@ void loop()
     memcpy(leds, temp1, STRIP_SIZE * sizeof(CRGB));
     config.currentSeq = seq;
 
-    FastLED.show();
+    FastLED.show(brightness);
   }
 }
 
@@ -94,6 +85,8 @@ void configMode()
   // If user canceled return to display mode
   if (config.currentSeq < 0)
     return;
+
+  FastLED.clear(true);
 
   // Load the sequence
   reloadSeq();
@@ -115,7 +108,7 @@ void configMode()
     leds[currentLED] = blinkColor(temp2[currentLED], CRGB::Blue);
 
     // Display the strip + blinking cursor
-    FastLED.show();
+    FastLED.show(MENU_BRIGHTNESS);
 
     // Set/unset currentLED
     if (btn1)
@@ -125,17 +118,66 @@ void configMode()
       break;
   }
 
-  saveSeq();
+  uint8_t brightness = selectBrightness();
+
+  saveSeq(brightness);
+}
+
+uint8_t selectBrightness()
+{
+  for (uint8_t b = MENU_BRIGHTNESS; b < 127; ++b)
+  {
+    FastLED.show(b);
+    delay(1);
+  }
+
+  for (uint8_t b = 127; b > 0; --b)
+  {
+    FastLED.show(b);
+    delay(1);
+  }
+
+  uint16_t potarRead = analogRead(POTAR_PIN);
+  uint8_t currentBrightness = constrain(map(potarRead, 0, 1023, 0, 255), 0, 255);
+
+  for (uint8_t b = 0; b < currentBrightness; ++b)
+  {
+    FastLED.show(b);
+    delay(1);
+  }
+
+
+  while (true)
+  {
+    // Handle inputs
+    bool btn1 = debounceButton(BTN1_PIN);
+    uint16_t potarRead = analogRead(POTAR_PIN);
+    FastLED.show(constrain(
+      map(potarRead, 0, 1023, 0, 255),
+      0, 255));
+
+    if (btn1)
+      return constrain(map(potarRead, 0, 1023, 0, 255), 0, 255);
+  }
 }
 
 int8_t selectSeq()
 {
   FastLED.clear(true);
 
+  int32_t usedSeq = 0;
+
   // Menu
   // Sequences (free one are unlit)
   for (int8_t i = 0; i < MAX_SEQ; ++i)
-    leds[i] = bitRead(config.usedSeq, i) ? CRGB::White : CRGB::Black;
+  {
+    uint16_t brightnessIndex =
+      sizeof(EEPROMConfig)
+      + (i+1) * STRIP_SIZE * sizeof(CRGB)
+      + i * sizeof(uint8_t);
+    bitWrite(usedSeq, i, EEPROM[brightnessIndex] != 0);
+    leds[i] = bitRead(usedSeq, i) ? CRGB::White : CRGB::Black;
+  }
 
   // OK / KO
   leds[MAX_SEQ] = CRGB::Red;
@@ -159,7 +201,7 @@ int8_t selectSeq()
       if (i == selectedSeq)
         leds[i] = cursorColor;
       else
-        leds[i] = bitRead(config.usedSeq, i) ? CRGB::White : CRGB::Black;
+        leds[i] = bitRead(usedSeq, i) ? CRGB::White : CRGB::Black;
     }
 
     // OK / KO
@@ -176,7 +218,7 @@ int8_t selectSeq()
 
 
     // Display the menu + blinking cursor
-    FastLED.show();
+    FastLED.show(MENU_BRIGHTNESS);
 
     if (btn1)
     {
@@ -193,7 +235,7 @@ int8_t selectSeq()
   return selectedSeq;
 }
 
-void saveSeq()
+void saveSeq(uint8_t brightness)
 {
   FastLED.clear(true);
 
@@ -219,7 +261,7 @@ void saveSeq()
     leds[ok] = blinkColor(leds[ok], CRGB::Blue);
 
     // Display the menu + blinking cursor
-    FastLED.show();
+    FastLED.show(MENU_BRIGHTNESS);
 
     if (btn1)
       break;
@@ -230,7 +272,12 @@ void saveSeq()
     for (uint8_t i = 0; i < STRIP_SIZE; ++i)
       writeSeqLED(i, temp2[i]);
 
-    bitWrite(config.usedSeq, config.currentSeq, 1);
+    uint16_t brightnessIndex =
+      sizeof(EEPROMConfig)
+      + (config.currentSeq+1) * STRIP_SIZE * sizeof(CRGB)
+      + config.currentSeq * sizeof(uint8_t);
+    EEPROM[brightnessIndex] = brightness;
+
     EEPROM.put(0, config);
   }
 }

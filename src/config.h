@@ -12,7 +12,7 @@
 // LED groups memory config
 
 // Nuber of leds to use
-#define STRIP_SIZE 100
+#define STRIP_SIZE 75
 // Maximum number of led groups
 #define MAX_GROUPS 12
 
@@ -24,6 +24,8 @@
 #define BLINK_INTER_MS 200
 uint32_t lastBlinkMs = 0;
 int8_t blinkState = LOW;
+
+#define MENU_BRIGHTNESS 30
 
 // leds state mapped on bits for optimisation
 //int8_t led_set[STRIP_SIZE / 8 + 1];
@@ -41,7 +43,6 @@ uint32_t lastDebounceTime[13];
 
 uint16_t lastPotarRead = 0;
 
-
 /*
  * System settings
  * Read from EEPROM if
@@ -52,7 +53,7 @@ uint16_t lastPotarRead = 0;
 struct EEPROMConfig {
   uint8_t stripSize = STRIP_SIZE;
   int8_t currentSeq = 0;
-  int16_t usedSeq = 0; // bitset (16)
 } config;
 
-const int16_t MAX_SEQ = 1020 / (STRIP_SIZE * sizeof(CRGB));
+#define EEPROM_SIZE 1024
+#define MAX_SEQ ((EEPROM_SIZE - sizeof(EEPROMConfig)) / ((STRIP_SIZE + 1) * sizeof(CRGB)))
