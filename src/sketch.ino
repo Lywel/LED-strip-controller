@@ -100,6 +100,11 @@ void sequenceManager()
   // Save the sequence to a buffer
   memcpy(temp2, leds, STRIP_SIZE * sizeof(CRGB));
 
+  // If this is a new sequence, set a default brightness (otherwise it will
+  // be saved to 0 and then considered as a free sequence)
+  if (seqBrightness == 0)
+    seqBrightness = MENU_BRIGHTNESS;
+
   uint8_t currentLED = 0;
 
   while (true)
