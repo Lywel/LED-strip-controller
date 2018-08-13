@@ -3,9 +3,9 @@
 #include "FastLED.h"
 
 // Pin config
-#define POTAR_PIN A0
-#define BTN1_PIN 5
-#define BTN2_PIN 6
+#define POTAR_PIN A1
+#define BTN1_PIN A0
+#define BTN2_PIN A2
 #define STRIP_PIN 3
 
 
