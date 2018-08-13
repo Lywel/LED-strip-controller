@@ -21,3 +21,28 @@ CRGB blinkColor(CRGB on, CRGB off)
   }
   return blinkState ? on : off;
 }
+
+void arrayRotate(CRGB* buf, int n)
+{
+  if (!n)
+    return;
+
+  n %= STRIP_SIZE;
+
+  if (n < 0)
+    n = STRIP_SIZE + n;
+
+  int count = 0;
+  for (int start = 0; count < STRIP_SIZE; start++) {
+      int current = start;
+      CRGB prev = buf[start];
+      do {
+          int next = (current + n) % STRIP_SIZE;
+          CRGB temp = buf[next];
+          buf[next] = prev;
+          prev = temp;
+          current = next;
+          count++;
+      } while (start != current);
+  }
+}

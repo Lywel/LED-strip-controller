@@ -40,6 +40,8 @@ void setup()
 }
 
 
+uint32_t lastRotation = 0;
+uint32_t rotationInterval = 0;
 
 /*
  * Main Loop
@@ -74,6 +76,25 @@ void loop()
     // restore saved state (not EEPROM io)
     config.currentSeq = seq;
     reloadSeq();
+  }
+
+  // Sequence rotation
+  uint16_t potarRead = analogRead(POTAR_PIN);
+  uint32_t now = millis();
+
+
+  if (potarRead > 614)
+    rotationInterval = 3000 / (potarRead - 614);
+  else if (potarRead < 410)
+    rotationInterval = 3000 / (410 - potarRead);
+  else
+    rotationInterval = 10;
+
+  if (now - lastRotation >= rotationInterval)
+  {
+    lastRotation = now;
+    arrayRotate(leds, potarRead < 410 ? -1 : (potarRead > 614 ? 1 : 0));
+    FastLED.show();
   }
 }
 
