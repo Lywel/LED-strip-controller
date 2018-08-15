@@ -235,6 +235,12 @@ CRGB colorPicker()
     uint16_t potarRead = analogRead(POTAR_PIN);
     uint8_t ledId = constrain(map(potarRead, 0, 1023, 0, 16), 0, 15);
 
+    // Set the cursor
+    leds[ledId] = blinkColor(leds[ledId], CRGB::Black);
+
+    // Display the menu + blinking cursor
+    FastLED.show(MENU_BRIGHTNESS);
+
     // Reset the menu
     leds[0] = Tungsten40W;
     leds[1] = Tungsten100W;
@@ -252,12 +258,6 @@ CRGB colorPicker()
     leds[13] = CRGB(255, 149, 122);
     leds[14] = CRGB(130, 255, 169);
     leds[15] = CRGB(188, 21, 114);
-
-    // Set the cursor
-    leds[ledId] = blinkColor(leds[ledId], CRGB::Black);
-
-    // Display the menu + blinking cursor
-    FastLED.show(MENU_BRIGHTNESS);
 
     // On click
     if (btn1)
