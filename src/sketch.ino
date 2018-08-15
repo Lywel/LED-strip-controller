@@ -72,8 +72,11 @@ void loop()
   // loop through sequences
   if (btn1)
   {
-    ++(config.currentSeq) %= MAX_SEQ;
-    reloadSeq();
+    int8_t cur = config.currentSeq;
+    do {
+      ++(config.currentSeq) %= MAX_SEQ;
+      reloadSeq();
+    } while (seqBrightness == 0 && config.currentSeq != cur);
   }
 
   // Open the sequence editor
