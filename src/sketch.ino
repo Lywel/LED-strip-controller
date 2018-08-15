@@ -54,6 +54,16 @@ uint32_t rotationInterval = 0;
  */
 void loop()
 {
+  // Handle brightness
+  uint16_t potarRead = analogRead(POTAR_PIN);
+  if (abs(potarRead - lastPotarRead) > 2)
+  {
+    lastPotarRead = potarRead;
+    FastLED.show(constrain(
+      map(potarRead, 0, 1023, 0, 255),
+      0, 255));
+  }
+
   // Handle buttons
   bool btn1 = debounceButton(BTN1_PIN);
   bool btn2 = debounceButton(BTN2_PIN);
