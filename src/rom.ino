@@ -65,6 +65,7 @@ void reloadSeq()
     + config.currentSeq * sizeof(uint8_t);
 
   uint8_t brightness = EEPROM[brightnessIndex];
+  seqBrightness = brightness;
 
   if (brightness > 0)
   {
@@ -76,8 +77,7 @@ void reloadSeq()
   }
   Serial.println();
 
-  seqBrightness = brightness;
-  FastLED.show(brightness);
+  FastLED.show();
 }
 
 

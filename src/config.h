@@ -12,7 +12,7 @@
 // LED groups memory config
 
 // Nuber of leds to use
-#define STRIP_SIZE 75
+#define STRIP_SIZE 31
 // Maximum number of led groups
 #define MAX_GROUPS 12
 
@@ -25,7 +25,7 @@
 uint32_t lastBlinkMs = 0;
 int8_t blinkState = LOW;
 
-#define MENU_BRIGHTNESS 30
+#define MENU_BRIGHTNESS 40
 
 // The real array of leds. One item for each led in the strip.
 CRGB leds[STRIP_SIZE];
@@ -40,6 +40,7 @@ uint32_t lastDebounceTime[2];
 uint16_t lastPotarRead = 0;
 
 uint8_t seqBrightness;
+CRGB cursorColor;
 
 /*
  * System settings
