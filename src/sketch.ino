@@ -31,6 +31,7 @@ void setup()
   set_max_power_in_volts_and_milliamps(MAX_VOLTS, MAX_MAMPS);
   set_max_power_indicator_LED(13);
   FastLED.setBrightness(20);
+  FastLED.setCorrection(TypicalSMD5050);
 
   // Load settings from EEPROM or initialize it
   initConfig();
