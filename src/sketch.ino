@@ -110,6 +110,7 @@ void sequenceManager()
     return;
 
   FastLED.clear(true);
+  cursorColor = CRGB::Blue;
 
   // Load the sequence
   reloadSeq();
@@ -118,8 +119,7 @@ void sequenceManager()
 
   // If this is a new sequence, set a default brightness (otherwise it will
   // be saved to 0 and then considered as a free sequence)
-  if (seqBrightness == 0)
-    seqBrightness = MENU_BRIGHTNESS;
+  seqBrightness = MENU_BRIGHTNESS;
 
   uint8_t currentLED = 0;
 
@@ -138,7 +138,10 @@ void sequenceManager()
       0, STRIP_SIZE-1);
 
     // Set the new cursor
-    leds[currentLED] = blinkColor(temp2[currentLED], CRGB::Blue);
+    if (!memcmp(leds[currentLED].raw, cursorColor.raw, 3))
+      leds[currentLED] = blinkColor(CRGB::Black, cursorColor);
+    else
+      leds[currentLED] = blinkColor(temp2[currentLED], cursorColor);
 
     // Display the strip + blinking cursor
     FastLED.show(MENU_BRIGHTNESS);
@@ -148,13 +151,14 @@ void sequenceManager()
       Serial.println("Click 2");
       if (sequenceEditorMenu() == -1)
         break;
+      FastLED.clear(false);
     }
 
-    // Set / unset currentLED
+    // Set currentLED to cursorColor
     if (btn1)
     {
       Serial.println("Click 1");
-      temp2[currentLED] = temp2[currentLED] ? CRGB::Black : CRGB::White;
+      temp2[currentLED] = cursorColor;
     }
   }
 }
@@ -177,7 +181,7 @@ int8_t sequenceEditorMenu()
     // Handle inputs
     bool btn1 = debounceButton(BTN1_PIN);
     uint16_t potarRead = analogRead(POTAR_PIN);
-    uint8_t ledId = constrain(map(potarRead, 0, 1023, 0, 3), 0, 2);
+    uint8_t ledId = constrain(map(potarRead, 0, 1023, 0, 4), 0, 3);
 
 
     // Reset the menu
@@ -209,10 +213,56 @@ int8_t sequenceEditorMenu()
         seqBrightness = brightnessSelector();
         return 0;
       }
+      else if (ledId == 3)
+      {
+        cursorColor = colorPicker();
+        return 0;
+      }
     }
   }
 
   return -1;
+}
+
+CRGB colorPicker()
+{
+  FastLED.clear(true);
+
+  while (true)
+  {
+    // Handle inputs
+    bool btn1 = debounceButton(BTN1_PIN);
+    uint16_t potarRead = analogRead(POTAR_PIN);
+    uint8_t ledId = constrain(map(potarRead, 0, 1023, 0, 16), 0, 15);
+
+    // Reset the menu
+    leds[0] = Tungsten40W;
+    leds[1] = Tungsten100W;
+    leds[2] = Halogen;
+    leds[3] = CarbonArc;
+    leds[4] = HighNoonSun;
+    leds[5] = DirectSunlight;
+    leds[6] = OvercastSky;
+    leds[7] = CRGB::Black;
+    leds[8] = CRGB::White;
+    leds[9] = CRGB(255, 255, 159);
+    leds[10] = CRGB(255, 239, 89);
+    leds[11] = CRGB(233, 252, 222);
+    leds[12] = CRGB(255, 221, 225);
+    leds[13] = CRGB(255, 149, 122);
+    leds[14] = CRGB(130, 255, 169);
+    leds[15] = CRGB(188, 21, 114);
+
+    // Set the cursor
+    leds[ledId] = blinkColor(leds[ledId], CRGB::Black);
+
+    // Display the menu + blinking cursor
+    FastLED.show(MENU_BRIGHTNESS);
+
+    // On click
+    if (btn1)
+      return leds[ledId];
+  }
 }
 
 
@@ -276,7 +326,7 @@ int8_t sequenceSelector()
   leds[MAX_SEQ] = CRGB::Red;
 
   int8_t selectedSeq = -1;
-  CRGB cursorColor = CRGB::Blue;
+  CRGB cursorColor = CRGB::White;
 
   while (true)
   {
